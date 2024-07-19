@@ -1,10 +1,9 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
-#include "data_block.h"
-#include "client.h"
 #include <QWidget>
-#include <thread>
+
+#include "serialize.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -19,11 +18,13 @@ class Widget : public QWidget
 public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
+    void setData(const char *data_array);
 
 private slots:
-    void pushButton_close_clicked();//закрытие программы
-
-    void pushButton_send_clicked();//загрузка данных и ее отправка
+    //закрытие программы
+    void pushButton_close_clicked();
+    //загрузка данных и ее отправка
+    void pushButton_send_clicked();
 
 private:
     Ui::Widget *ui;

@@ -1,7 +1,9 @@
 #include "widget.h"
 #include "./ui_widget.h"
 
-Widget::Widget(QWidget *parent) : QWidget(parent), ui(new Ui::Widget)
+Widget::Widget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::Widget)
 {
     ui->setupUi(this);
 
@@ -62,6 +64,6 @@ void Widget::udpServer()
 
 void Widget::pushButton_close_clicked()
 {
-    qApp->quit();//безопасное закрытие программы
+    close();//безопасное закрытие программы
 }
 

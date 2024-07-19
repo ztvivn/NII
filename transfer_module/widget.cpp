@@ -1,32 +1,18 @@
 #include "widget.h"
-#include "./ui_widget.h"
 
-Widget::Widget(QWidget *parent) : QWidget(parent), ui(new Ui::Widget)
+#include "./ui_widget.h"
+#include "client.h"
+
+Widget::Widget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::Widget)
 {
     ui->setupUi(this);
 
-    connect(ui->pushButton_close, &QPushButton::clicked, this, &Widget::pushButton_close_clicked);//соединяем сигнал кнопки закрытия со слотом
-    connect(ui->pushButton_send, &QPushButton::clicked, this, &Widget::pushButton_send_clicked);//соединяем сигнал отправки данных
-
-    ui->lineEdit_data->setText(data.getData());//выводим на экран информацию в поле "Класс объекта"
-
-    ui->tableWidget->setRowCount(64);//строк в табл
-    ui->tableWidget->setColumnCount(64);//столбцов в табл
-
-    for (int row = 0; row < 64; row++)//заполняем таблицу данными из массива data
-    {
-        for (int col = 0; col < 64; col++)
-        {
-            int index = row * 64 + col;
-            if (index < 4096)
-            {
-                int number = data.data[index];// Преобразуем байт в число для отображения
-                QTableWidgetItem *item = new QTableWidgetItem(QString::number(number, 16).rightJustified(2, '0'));
-                ui->tableWidget->setItem(row, col, item);//записываем данные в каждую ячейку
-            }
-        }
-    }
-    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);//запрещаем редактирование таблицы
+    //соединяем сигнал кнопки закрытия со слотом
+    connect(ui->pushButton_close, &QPushButton::clicked, this, &Widget::pushButton_close_clicked);
+    //соединяем сигнал отправки данных
+    connect(ui->pushButton_send, &QPushButton::clicked, this, &Widget::pushButton_send_clicked);
 }
 
 Widget::~Widget()
@@ -36,21 +22,29 @@ Widget::~Widget()
 
 void Widget::pushButton_close_clicked()
 {
-    qApp->quit();//безопасное закрытие программы
+    //безопасное закрытие программы
+    close();
 }
 
 
 void Widget::pushButton_send_clicked()
 {
-    data.setLatitude(ui->doubleSpinBox_latitude->value());//считваем значение для широты
-    data.setLongitude(ui->doubleSpinBox_longitude->value());//считываем значение для долготы
-    data.setAltitude(ui->doubleSpinBox_altitude->value());//считываем значение для высоты
-    data.setCourse(ui->doubleSpinBox_course->value());//считываем значение для курса
+    //считваем значение для широты
+    data.latitude = encryption(ui->doubleSpinBox_latitude->value(), DISCHARGE_PRICE, MASK_LATITUDE);
+    //считываем значение для долготы
+    data.longitude = encryption(ui->doubleSpinBox_longitude->value(), DISCHARGE_PRICE, MASK_LONGITUDE);
+    //считываем значение для высоты
+    data.altitude = encryption(ui->doubleSpinBox_altitude->value(), DISCHARGE_PRICE, MASK_ALTITUDE);
+    //считываем значение для курса
+    data.course = encryption(ui->doubleSpinBox_course->value(), DISCHARGE_PRICE, MASK_COURSE);
 
-    data.setName(ui->lineEdit_name->text());//считываем строку имени объекта
-    data.setDescription(ui->lineEdit_description->text());//считываем строку описание объекта
+    //считываем строку имени объекта
+    setName(data, ui->lineEdit_name->text());
+    //считываем строку описание объекта
+    setDescription(data, ui->lineEdit_description->text());
 
-    if(ui->lineEdit_name->text().isEmpty() || ui->lineEdit_description->text().isEmpty())//проверка на пустые поля
+    //проверка на пустые поля
+    if(ui->lineEdit_name->text().isEmpty() || ui->lineEdit_description->text().isEmpty())
     {
         ui->error_output->setText("\t\t\tОшибка! Вы не заполнили все поля!");
         ui->error_output->setStyleSheet("QLabel { color : red; }");
@@ -64,8 +58,47 @@ void Widget::pushButton_send_clicked()
 
     for(uint i = 1; i <= 4; ++i)
     {
-        client.send(client.serialize(data, i));
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1000));//отправляем сообщение 1 раз в секунду
+        client.send(serialize(data, i));
     }
 }
 
+void Widget::setData(const char *data_array)
+{
+    for(int i = 0; i < sizeof(data.data) && i < sizeof(data_array); ++i)
+    {
+        data.data[i] = data_array[i];
+    }
+
+    //добавляем полезную информацию(Класс объекта) к массиву данных
+    data.data[4092] = 4;
+    data.data[4093] = 0;
+    data.data[4094] = 0;
+    data.data[4095] = 0;
+
+    //строк в табл
+    ui->tableWidget->setRowCount(64);
+    //столбцов в табл
+    ui->tableWidget->setColumnCount(64);
+
+    //заполняем таблицу данными из массива data
+    for (int row = 0; row < 64; row++)
+    {
+        for (int col = 0; col < 64; col++)
+        {
+            int index = row * 64 + col;
+            if (index < 4096)
+            {
+                // Преобразуем байт в число для отображения
+                int number = static_cast<unsigned char>(data.data[index]);
+                QTableWidgetItem *item = new QTableWidgetItem(QString::number(number, 16).rightJustified(2, '0'));
+                //записываем данные в каждую ячейку
+                ui->tableWidget->setItem(row, col, item);
+            }
+        }
+    }
+    //запрещаем редактирование таблицы
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    //выводим на экран информацию в поле "Класс объекта"
+    ui->lineEdit_data->setText(getData(data));
+}

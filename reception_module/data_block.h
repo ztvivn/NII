@@ -21,6 +21,8 @@ struct Data_block
     QString getData();
     QString getName();
     QString getDescription();
+    QString convertFromWindows1251Name(const std::array<char, 8> &inputArray);//переводим строку name в кодировку Win1251
+    QString convertFromWindows1251Description(const std::array<char, 32> &inputArray);//переводим строку description в кодировку Win1251
 };
 
 Data_block deserialize(const QByteArray &data);

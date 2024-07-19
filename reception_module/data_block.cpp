@@ -1,4 +1,9 @@
 #include "data_block.h"
+#include <iconv.h>
+#include <QString>
+#include <array>
+#include <iostream>
+#include <cstring>
 
 #define MASK_LATITUDE 16384//14 бит для минуса широты
 #define MASK_LONGITUDE 32768//15 бит для минуса долготы
@@ -124,30 +129,92 @@ QString Data_block::getData()
 
 QString Data_block::getName()
 {
-    std::string name_array;
     QString name_str;
-
-    for(auto &value : this->name)
-    {
-        name_array.push_back(value);
-    }
-
-    name_str = QString::fromStdString(name_array);
+    name_str = convertFromWindows1251Name(this->name);
 
     return name_str;
 }
 
 QString Data_block::getDescription()
 {
-    std::string description_array;
     QString description_str;
-
-    for(auto &value : this->description)
-    {
-        description_array.push_back(value);
-    }
-
-    description_str = QString::fromStdString(description_array);
+    description_str = convertFromWindows1251Description(this->description);
 
     return description_str;
+}
+
+QString Data_block::convertFromWindows1251Name(const std::array<char, 8> &inputArray)
+{
+    // Открытие конвертера iconv
+    iconv_t cd = iconv_open("UTF-8", "CP1251");
+    if (cd == (iconv_t)(-1)) {
+        std::cerr << "Не удалось открыть iconv" << std::endl;
+        return QString();
+    }
+
+    // Настройка буфера ввода
+    const char *inBuf = inputArray.data();
+    size_t inBytesLeft = inputArray.size();
+
+    // Настройка буфера вывода
+    size_t outBufSize = inBytesLeft * 2; // Достаточно большой буфер для результата
+    char *outBuf = new char[outBufSize];
+    char *outBufStart = outBuf;
+    size_t outBytesLeft = outBufSize;
+
+    // Преобразование строки
+    while (inBytesLeft > 0 && outBytesLeft > 0) {
+        size_t res = iconv(cd, const_cast<char**>(&inBuf), &inBytesLeft, &outBuf, &outBytesLeft);
+        if (res == (size_t)-1) {
+            std::cerr << "Ошибка преобразования iconv: " << strerror(errno) << std::endl;
+            break;
+        }
+    }
+
+    // Создание QString из результирующего буфера UTF-8
+    QString result = QString::fromUtf8(outBufStart, outBufSize - outBytesLeft);
+
+    // Освобождение памяти и закрытие конвертера iconv
+    delete[] outBufStart;
+    iconv_close(cd);
+
+    return result;
+}
+
+QString Data_block::convertFromWindows1251Description(const std::array<char, 32> &inputArray)
+{
+    // Открытие конвертера iconv
+    iconv_t cd = iconv_open("UTF-8", "CP1251");
+    if (cd == (iconv_t)(-1)) {
+        std::cerr << "Не удалось открыть iconv" << std::endl;
+        return QString();
+    }
+
+    // Настройка буфера ввода
+    const char *inBuf = inputArray.data();
+    size_t inBytesLeft = inputArray.size();
+
+    // Настройка буфера вывода
+    size_t outBufSize = inBytesLeft * 2; // Достаточно большой буфер для результата
+    char *outBuf = new char[outBufSize];
+    char *outBufStart = outBuf;
+    size_t outBytesLeft = outBufSize;
+
+    // Преобразование строки
+    while (inBytesLeft > 0 && outBytesLeft > 0) {
+        size_t res = iconv(cd, const_cast<char**>(&inBuf), &inBytesLeft, &outBuf, &outBytesLeft);
+        if (res == (size_t)-1) {
+            std::cerr << "Ошибка преобразования iconv: " << strerror(errno) << std::endl;
+            break;
+        }
+    }
+
+    // Создание QString из результирующего буфера UTF-8
+    QString result = QString::fromUtf8(outBufStart, outBufSize - outBytesLeft);
+
+    // Освобождение памяти и закрытие конвертера iconv
+    delete[] outBufStart;
+    iconv_close(cd);
+
+    return result;
 }
