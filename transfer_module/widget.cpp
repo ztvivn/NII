@@ -1,5 +1,7 @@
 #include "widget.h"
 
+#include <fstream>
+
 #include "./ui_widget.h"
 #include "client.h"
 
@@ -8,11 +10,6 @@ Widget::Widget(QWidget *parent)
     , ui(new Ui::Widget)
 {
     ui->setupUi(this);
-
-    //соединяем сигнал кнопки закрытия со слотом
-    connect(ui->pushButton_close, &QPushButton::clicked, this, &Widget::pushButton_close_clicked);
-    //соединяем сигнал отправки данных
-    connect(ui->pushButton_send, &QPushButton::clicked, this, &Widget::pushButton_send_clicked);
 }
 
 Widget::~Widget()
@@ -20,14 +17,14 @@ Widget::~Widget()
     delete ui;
 }
 
-void Widget::pushButton_close_clicked()
+void Widget::on_pushButton_close_clicked()
 {
     //безопасное закрытие программы
     close();
 }
 
 
-void Widget::pushButton_send_clicked()
+void Widget::on_pushButton_send_clicked()
 {
     //считваем значение для широты
     data.latitude = encryption(ui->doubleSpinBox_latitude->value(), DISCHARGE_PRICE, MASK_LATITUDE);
@@ -55,25 +52,27 @@ void Widget::pushButton_send_clicked()
     ui->error_output->setStyleSheet("QLabel { color : green; }");
 
     Client client;
-
+    //отправляем 4 пакета с нашей информацией
     for(uint i = 1; i <= 4; ++i)
     {
         client.send(serialize(data, i));
     }
 }
 
-void Widget::setData(const char *data_array)
+void Widget::setData(std::string file_name)
 {
-    for(int i = 0; i < sizeof(data.data) && i < sizeof(data_array); ++i)
+    //открываем файл с данными 4кб
+    std::ifstream file_array(file_name, std::ios::binary);
+    //проверка на наличие файла
+    if(!file_array)
     {
-        data.data[i] = data_array[i];
+        qDebug() << "no file";
+        close();
     }
-
-    //добавляем полезную информацию(Класс объекта) к массиву данных
-    data.data[4092] = 4;
-    data.data[4093] = 0;
-    data.data[4094] = 0;
-    data.data[4095] = 0;
+    //читаем файл
+    file_array.read(reinterpret_cast<char*>(data.data), sizeof(data.data));
+    //закрываем файл
+    file_array.close();
 
     //строк в табл
     ui->tableWidget->setRowCount(64);
@@ -100,5 +99,5 @@ void Widget::setData(const char *data_array)
     ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     //выводим на экран информацию в поле "Класс объекта"
-    ui->lineEdit_data->setText(getData(data));
+    ui->lineEdit_data->setText(QString::number(getClass(data)));
 }

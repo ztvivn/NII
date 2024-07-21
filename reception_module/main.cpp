@@ -1,8 +1,6 @@
-#include "widget.h"
-#include "data_block.h"
 #include <QApplication>
-#include <QUdpSocket>
-#include <QNetworkDatagram>
+
+#include "widget.h"
 
 
 int main(int argc, char *argv[])
@@ -11,7 +9,6 @@ int main(int argc, char *argv[])
     Widget w;
 
     w.show();
-    w.udpServer();
 
     return a.exec();
 }

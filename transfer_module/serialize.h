@@ -18,7 +18,7 @@
 struct Data_block
 {
     //блок с данными
-    char data[4096];
+    unsigned char data[4096];
     //широта
     uint32_t  latitude;
     //долгота
@@ -39,11 +39,11 @@ void setName(Data_block &data, QString text);
 void setDescription(Data_block &data, QString text);
 
 //возращаем последние 4 байта из массива data(полезная для нас информация)
-QString getData(Data_block &data);
+uint32_t getClass(const Data_block &data);
 //округляет до 3 знаков после запятой
 double accuracy(double value);
-//переводит широту в целочисленный тип и ставит побитово маску для знака
-uint32_t encryption(double value, const double discharge_price, const uint32_t mask);
+//переводит значение в целочисленный тип и ставит побитово маску для знака
+uint32_t encryption(float value, const float discharge_price, const uint32_t mask);
 //метод для преобразования в кодировку Win1251 для name
 std::array<char, 6> convertToWindows1251Name(const QString &str);
 //метод для преобразования в кодировку Win1251 для description

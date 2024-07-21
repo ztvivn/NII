@@ -18,13 +18,13 @@ class Widget : public QWidget
 public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
-    void setData(const char *data_array);
+    void setData(std::string file_name);
 
 private slots:
     //закрытие программы
-    void pushButton_close_clicked();
+    void on_pushButton_close_clicked();
     //загрузка данных и ее отправка
-    void pushButton_send_clicked();
+    void on_pushButton_send_clicked();
 
 private:
     Ui::Widget *ui;

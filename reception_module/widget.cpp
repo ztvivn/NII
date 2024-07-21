@@ -1,6 +1,10 @@
 #include "widget.h"
 #include "./ui_widget.h"
 
+#include <fstream>
+
+#define PORT 49101
+
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
@@ -8,9 +12,8 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     udpSocket = new QUdpSocket(this);
-    udpSocket->bind(QHostAddress::Any, 49101);
-    connect(udpSocket, &QUdpSocket::readyRead, this, &Widget::udpServer);
-    connect(ui->pushButton_close, &QPushButton::clicked, this, &Widget::pushButton_close_clicked);//соединяем сигнал кнопки закрытия со слотом
+    udpSocket->bind(QHostAddress::Any, PORT);
+    connect(udpSocket, &QUdpSocket::readyRead, this, &Widget::acceptData);
 }
 
 Widget::~Widget()
@@ -18,7 +21,7 @@ Widget::~Widget()
     delete ui;
 }
 
-void Widget::udpServer()
+void Widget::acceptData()
 {
     while(udpSocket->hasPendingDatagrams())
     {
@@ -30,40 +33,50 @@ void Widget::udpServer()
 
         udpSocket->readDatagram(datagram.data(), datagram.size(), &sender, &senderPort);
         data_array = deserialize(datagram);
-        ui->doubleSpinBox_latitude->setValue(data_array.latitude);//заполняем данными из пришедших пакетов графический интерфейс
+        //заполняем данными из пришедших пакетов графический интерфейс
+        ui->doubleSpinBox_latitude->setValue(data_array.latitude);
         ui->doubleSpinBox_longitude->setValue(data_array.longitude);
         ui->doubleSpinBox_altitude->setValue(data_array.altitude);
         ui->doubleSpinBox_course->setValue(data_array.course);
-        ui->lineEdit_name->setText(data_array.getName());
-        ui->lineEdit_description->setText(data_array.getDescription());
+        ui->lineEdit_name->setText(getName(data_array));
+        ui->lineEdit_description->setText(getDescription(data_array));
 
-        if(data_array.value_n == 4)//начинаем заполнять таблицу после того, как придет последний 4 пакет
+        //начинаем заполнять таблицу после того, как придет последний 4 пакет
+        if(data_array.value_n == 4)
         {
-            ui->lineEdit_data->setText(data_array.getData());//выводим на экран информацию в поле "Класс объекта"
+            //выводим на экран информацию в поле "Класс объекта"
+            ui->lineEdit_data->setText(QString::number(getClass(data_array)));
 
-            ui->tableWidget->setRowCount(64);//строк в табл
-            ui->tableWidget->setColumnCount(64);//столбцов в табл
+            //строк в табл
+            ui->tableWidget->setRowCount(64);
+            //столбцов в табл
+            ui->tableWidget->setColumnCount(64);
 
-            for (int row = 0; row < 64; row++)//заполняем таблицу данными из массива data
+            //заполняем таблицу данными из массива data
+            for (int row = 0; row < 64; row++)
             {
                 for (int col = 0; col < 64; col++)
                 {
                     int index = row * 64 + col;
                     if (index < 4096)
                     {
-                        int number = data_array.data[index];// Преобразуем байт в число для отображения
+                        // Преобразуем байт в число для отображения
+                        int number = static_cast<unsigned char>(data_array.data[index]);
                         QTableWidgetItem *item = new QTableWidgetItem(QString::number(number, 16).rightJustified(2, '0'));
-                        ui->tableWidget->setItem(row, col, item);//записываем данные в каждую ячейку
+                        //записываем данные в каждую ячейку
+                        ui->tableWidget->setItem(row, col, item);
                     }
                 }
             }
-            ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);//запрещаем редактирование таблицы
+            //запрещаем редактирование таблицы
+            ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
         }
     }
 }
 
-void Widget::pushButton_close_clicked()
+void Widget::on_pushButton_close_clicked()
 {
-    close();//безопасное закрытие программы
+    //безопасное закрытие программы
+    close();
 }
 

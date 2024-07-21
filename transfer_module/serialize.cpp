@@ -4,7 +4,7 @@
 #include <QDebug>
 #include <QIODevice>
 
-uint32_t encryption(double value, const double discharge_price, const uint32_t mask)
+uint32_t encryption(float value, const float discharge_price, const uint32_t mask)
 {
     //целочисленное представление
     uint32_t value_integer;
@@ -23,6 +23,7 @@ uint32_t encryption(double value, const double discharge_price, const uint32_t m
         value_integer = mask | value_integer;
     }
     //возвращаем зашифрованное значение
+    //qDebug() << value_integer;
     return value_integer;
 }
 
@@ -56,16 +57,9 @@ void setDescription(Data_block &data, QString text)
     }
 }
 
-QString getData(Data_block &data)
+uint32_t getClass(const Data_block &data)
 {
-    uint32_t value;
-    QString value_str;
-
-    value = *reinterpret_cast<uint32_t*>(&data.data[4092]);
-    //переводим значение в строку, чтобы вывести ее на экран
-    value_str = QString::number(value);
-
-    return value_str;
+    return *reinterpret_cast<const uint32_t*>(&data.data[4092]);
 }
 
 std::array<char, 6> convertToWindows1251Name(const QString &str)

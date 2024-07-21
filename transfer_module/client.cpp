@@ -1,5 +1,7 @@
 #include "client.h"
 
+#define PORT 49101
+
 Client::Client(QObject *parent)
     : QObject(parent)
     , mClient(new QUdpSocket(this))
@@ -7,5 +9,5 @@ Client::Client(QObject *parent)
 
 void Client::send(const QByteArray &buffer)
 {
-    mClient->writeDatagram(buffer, QHostAddress::LocalHost, 49101);
+    mClient->writeDatagram(buffer, QHostAddress::LocalHost, PORT);
 }

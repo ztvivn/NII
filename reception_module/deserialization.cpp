@@ -1,77 +1,87 @@
-#include "data_block.h"
+#include "deserialization.h"
+
 #include <iconv.h>
-#include <QString>
-#include <array>
 #include <iostream>
-#include <cstring>
 
-#define MASK_LATITUDE 16384//14 бит для минуса широты
-#define MASK_LONGITUDE 32768//15 бит для минуса долготы
+//14 бит для минуса широты
+#define MASK_LATITUDE 16384
+//15 бит для минуса долготы
+#define MASK_LONGITUDE 32768
 
-Data_block::Data_block() {}
 
 Data_block deserialize(const QByteArray &data)
 {
     QDataStream stream(data);
     Data_block objectData;
-
-    uint8_t value_ID;//идентификатор сообщ
+    //идентификатор сообщения
+    uint8_t value_ID;
     stream >> value_ID;
-
-    uint16_t value_length;//длина сообщ
+    //длина сообщ
+    uint16_t value_length;
     stream >> value_length;
-
-    uint8_t value_code;//код операции
+    //код операции
+    uint8_t value_code;
     stream >> value_code;
-
-    uint16_t value_source;//признак источника
+    //признак источника
+    uint16_t value_source;
     stream >> value_source;
-
-    uint32_t value_input;//признак ввода
+    //признак ввода
+    uint32_t value_input;
     stream >> value_input;
-
-    uint32_t value_reliability;//признак достоверности
+    //признак достоверности
+    uint32_t value_reliability;
     stream >> value_reliability;
-
-    uint32_t latitude;//широта
+    //широта
+    uint32_t latitude;
     stream >> latitude;
-    uint32_t longitude;//долгота
+    //долгота
+    uint32_t longitude;
     stream >> longitude;
-    uint32_t altitude;//высота
+    //высота
+    uint32_t altitude;
     stream >> altitude;
-    std::array<char, 32> description;//описание объекта
+    //описание объекта
+    std::array<char, 32> description;
     for (char &c : description)
     {
         stream >> c;
     }
-    std::array<char, 8> name;//имя объекта
+    //имя объекта
+    std::array<char, 8> name;
     for (char &c : name)
     {
         stream >> c;
     }
-    uint32_t course;//путевой угол
+    //путевой угол
+    uint32_t course;
     stream >> course;
 
-    uint16_t value_unique;//уникальный идентификатор crc16
+    //уникальный идентификатор crc16
+    uint16_t value_unique;
     stream >> value_unique;
 
-    uint8_t value_N;//общее количество информации
+    //общее количество информации
+    uint8_t value_N;
     stream >> value_N;
-    uint8_t value_n;//порядковый номер фрагмента информации
+    //порядковый номер фрагмента информации
+    uint8_t value_n;
     stream >> value_n;
     objectData.value_n = value_n;
-    uint16_t data_size;//количество байтов фрагмента информации
+    //количество байтов фрагмента информации
+    uint16_t data_size;
     stream >> data_size;
 
     unsigned char value_inform[1024];
-    for(int i = 0; i < 1024; ++i)//фрагмент информации
+    //фрагмент информации
+    for(int i = 0; i < 1024; ++i)
     {
         stream >> value_inform[i];
     }
 
     if(value_n > 1)
     {
-        for (int i = 0, j = (value_n - 1) * 1024; i < 1024 && j < 1024 * value_n; ++i, ++j)//записываем в массив данные из пакета
+        //записываем в массив данные из пакета
+        for (int i = 0, j = (value_n - 1) * 1024; i < 1024 && j < 1024 * value_n; ++i, ++j)
         {
             objectData.data[j] = value_inform[i];
         }
@@ -79,12 +89,14 @@ Data_block deserialize(const QByteArray &data)
         return objectData;
     }
 
-    for(int i = 0; i < 1024; ++i)//заполняем данные для массива из первого пакета
+    //заполняем данные для массива из первого пакета
+    for(int i = 0; i < 1024; ++i)
     {
         objectData.data[i] = value_inform[i];
     }
 
-    if(latitude > 10000)//убираем маску, которая показывает минус
+    //убираем маску, которая показывает минус
+    if(latitude > 10000)
     {
         latitude = latitude ^ MASK_LATITUDE;
         double latitude_copy = latitude;
@@ -116,34 +128,28 @@ Data_block deserialize(const QByteArray &data)
     return objectData;
 }
 
-QString Data_block::getData()
+uint32_t getClass(const Data_block &data)
 {
-    uint32_t value;
-    QString value_str;
-
-    value = *reinterpret_cast<uint32_t*>(&data[4092]);
-    value_str = QString::number(value);//переводим значение в строку, чтобы вывести ее на экран
-
-    return value_str;
+    return *reinterpret_cast<const uint32_t*>(&data.data[4092]);
 }
 
-QString Data_block::getName()
+QString getName(Data_block data_array)
 {
     QString name_str;
-    name_str = convertFromWindows1251Name(this->name);
+    name_str = convertFromWindows1251Name(data_array.name);
 
     return name_str;
 }
 
-QString Data_block::getDescription()
+QString getDescription(Data_block data_array)
 {
     QString description_str;
-    description_str = convertFromWindows1251Description(this->description);
+    description_str = convertFromWindows1251Description(data_array.description);
 
     return description_str;
 }
 
-QString Data_block::convertFromWindows1251Name(const std::array<char, 8> &inputArray)
+QString convertFromWindows1251Name(const std::array<char, 8> &inputArray)
 {
     // Открытие конвертера iconv
     iconv_t cd = iconv_open("UTF-8", "CP1251");
@@ -157,7 +163,7 @@ QString Data_block::convertFromWindows1251Name(const std::array<char, 8> &inputA
     size_t inBytesLeft = inputArray.size();
 
     // Настройка буфера вывода
-    size_t outBufSize = inBytesLeft * 2; // Достаточно большой буфер для результата
+    size_t outBufSize = inBytesLeft * 2;
     char *outBuf = new char[outBufSize];
     char *outBufStart = outBuf;
     size_t outBytesLeft = outBufSize;
@@ -181,7 +187,7 @@ QString Data_block::convertFromWindows1251Name(const std::array<char, 8> &inputA
     return result;
 }
 
-QString Data_block::convertFromWindows1251Description(const std::array<char, 32> &inputArray)
+QString convertFromWindows1251Description(const std::array<char, 32> &inputArray)
 {
     // Открытие конвертера iconv
     iconv_t cd = iconv_open("UTF-8", "CP1251");
@@ -195,7 +201,7 @@ QString Data_block::convertFromWindows1251Description(const std::array<char, 32>
     size_t inBytesLeft = inputArray.size();
 
     // Настройка буфера вывода
-    size_t outBufSize = inBytesLeft * 2; // Достаточно большой буфер для результата
+    size_t outBufSize = inBytesLeft * 2;
     char *outBuf = new char[outBufSize];
     char *outBufStart = outBuf;
     size_t outBytesLeft = outBufSize;

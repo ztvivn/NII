@@ -17,8 +17,8 @@ set(PROJECT_SOURCES
         main.cpp
         widget.cpp
         widget.h
-        data_block.cpp
-        data_block.h
+        deserialization.cpp
+        deserialization.h
         widget.ui
 )
 
@@ -26,7 +26,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(reception_module
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        data_block.h data_block.cpp
+        deserialization.h deserialization.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET reception_module APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
